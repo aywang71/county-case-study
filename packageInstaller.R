@@ -1,0 +1,2 @@
+my_packages = c("tidyverse", "ggplot2", "broom", "coefplot", "cowplot", "gapminder", "GGally", "ggrepel", "ggridges", "gridExtra", "here", "interplot", "margins", "maps", "mapproj", "mapdata", "MASS", "quantreg", "rlang", "scales", "survey", "srvyr", "viridis", "viridisLite", "devtools", "bookdown", "gganimate", "knitr", "lubridate", "DataExplorer","fakir")
+install.packages(my_packages, repos="http://cran.rstudio.com")
