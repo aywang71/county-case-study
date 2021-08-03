@@ -137,6 +137,32 @@ data2000$AGEGRP[data2000$AGEGRP==18] <- "90-94"
 #3: Updating column names
 colnames(data2000) <- c("STNAME", "CTYNAME", "AGEGRP", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010)
 
-#4: cast to new file 
+#4: cast to new file
 setwd("~/GitHub/county-case-study/data")
 write.csv(data2000, file = "2000age.csv")
+
+
+setwd("~/GitHub/county-case-study")
+election <- read.csv("data/countypres_2000-2020.csv")
+
+#1: get rid of all rows reading non R/D data
+election$party[election$party=="GREEN"] <- NA
+election$party[election$party=="LIBERTARIAN"] <- NA
+election$party[election$party=="OTHER"] <- NA
+#purging these two states because they have no county names 
+election$state[election$state=="DISTRICT OF COLUMBIA"] <- NA
+election$state[election$state=="ALASKA"] <- NA
+election <- na.omit(election)
+
+#2: null useless columns
+election$office <- NULL
+election$mode <- NULL
+election$version <- NULL
+election$candidate <- NULL
+election$state_po <- NULL
+
+#3: combine the counties - does not work 
+data <- election %>% group_by(year, county_fips) %>% mutate(
+  democratic = ifelse(party=="DEMOCRATIC", candidatevotes, 0), 
+  republican = ifelse(party=="REPUBLICAN", candidatevotes, 0)
+)
