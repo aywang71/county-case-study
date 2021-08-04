@@ -161,8 +161,13 @@ election$version <- NULL
 election$candidate <- NULL
 election$state_po <- NULL
 
-#3: combine the counties - does not work 
-data <- election %>% group_by(year, county_fips) %>% mutate(
-  democratic = ifelse(party=="DEMOCRATIC", candidatevotes, 0), 
-  republican = ifelse(party=="REPUBLICAN", candidatevotes, 0)
+#3: split into columns and format more
+election <- election  %>% 
+  group_by(party) %>% 
+  mutate(row = row_number()) %>% 
+  tidyr::pivot_wider(names_from = party, values_from = candidatevotes) %>% 
+  select(-row)
+
+election <- election %>% group_by(county_fips) %>% mutate(
+  winner = ifelse(sum(DEMOCRAT) > sum(REPUBLICAN), "D", "R")
 )
