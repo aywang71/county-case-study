@@ -54,10 +54,18 @@ race2010$YEAR[race2010$YEAR==12] <- 2019
 #4: remove NULL'ed out years
 race2010 <- na.omit(race2010)
 
-#5: cast to new file 
+#5: apply wide pivot to years probably worth changing up the position of year and race but I can't figure out how to (maybe a transpose) - not working currently TODO
+data <- race2010  %>% 
+  group_by(YEAR) %>% 
+  mutate(row = row_number()) %>% 
+  tidyr::pivot_wider(names_from = YEAR, values_from = c("white", "black", "native", "asian", "pacific", "hispanic")) %>% 
+  select(-row)
+view(data)
+
+#6: cast to new file 
 setwd("~/GitHub/county-case-study/data")
 write.csv(race2010, file = "2010race.csv")
-#6: done? probably worth changing up the position of year and race but I can't figure out how to (maybe a transpose)
+
 
 #1: need to also find a way to make the age data - I want the single "year" column to be distributed across them 
 
@@ -141,9 +149,8 @@ colnames(data2000) <- c("STNAME", "CTYNAME", "AGEGRP", 2000, 2001, 2002, 2003, 2
 setwd("~/GitHub/county-case-study/data")
 write.csv(data2000, file = "2000age.csv")
 
-
 setwd("~/GitHub/county-case-study")
-election <- read.csv("data/countypres_2000-2020.csv")
+election <- read.csv("data/V2countypres_2000-2020.csv")
 
 election$totalvotes <- NULL
 
@@ -157,8 +164,13 @@ election$state[election$state=="DISTRICT OF COLUMBIA"] <- NA
 election$state[election$state=="ALASKA"] <- NA
 election <- na.omit(election)
 #purging this for duplicate checking
-election$mode[election$mode=="ELECTION DAY"] <- "TOTAL"
+#election$mode <- gsub("ELECTION DAY","TOTAL",election$mode)
+#election$mode[election$mode=="ELECTION DAY"] <- "TOTAL"
 election$mode[election$mode!="TOTAL"] <- NA
+#purging counties with missing data
+election$county_fips[election$county_fips=="8014"] <- NA
+election$county_fips[election$county_fips=="36000"] <- NA
+election$county_fips[election$county_fips=="51515"] <- NA
 election <- na.omit(election)
 
 #2: null useless columns
@@ -168,6 +180,7 @@ election$version <- NULL
 election$candidate <- NULL
 election$state_po <- NULL
 
+election$county_name <- gsub("CITY","",election$county_name)
 
 #3: split into columns and format more
 election <- election  %>% 
@@ -177,25 +190,26 @@ election <- election  %>%
   select(-row)
 
 election <- election %>% group_by(county_fips) %>% mutate(
-  winner = ifelse(sum(DEMOCRAT) > sum(REPUBLICAN), "D", "R")
+  winner = ifelse(DEMOCRAT > REPUBLICAN, "D", "R")#(DEMOCRAT) - (REPUBLICAN)
 )
 
 #4: split election years into columns
 election$DEMOCRAT <- NULL
 election$REPUBLICAN <- NULL
 
-election <- election %>%
+election2 <- election %>%
   group_by(year) %>%
   mutate(row = row_number()) %>%
-  tidyr::pivot_wider(names_from = year, values_from = winner) %>%
-  select(-row)
+  tidyr::pivot_wider(names_from = year, values_from = winner) %>% select(-row)
 
-#election <- election[!duplicated(election)]
+data <- na.omit(election2)
+dim(data)
+dim(election2)
 
 #5: cast to new file
 setwd("~/GitHub/county-case-study/data")
-write.csv(election, file = "election.csv")
+write.csv(election2, file = "election.csv")
 
-data <- na.omit(election)
-dim(data)
-dim(election)
+
+setwd("~/GitHub/county-case-study")
+election <- read.csv("data/Election_data_v2.csv")
