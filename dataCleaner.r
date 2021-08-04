@@ -145,13 +145,20 @@ write.csv(data2000, file = "2000age.csv")
 setwd("~/GitHub/county-case-study")
 election <- read.csv("data/countypres_2000-2020.csv")
 
+election$totalvotes <- NULL
+
 #1: get rid of all rows reading non R/D data
 election$party[election$party=="GREEN"] <- NA
 election$party[election$party=="LIBERTARIAN"] <- NA
 election$party[election$party=="OTHER"] <- NA
+election <- na.omit(election)
 #purging these two states because they have no county names 
 election$state[election$state=="DISTRICT OF COLUMBIA"] <- NA
 election$state[election$state=="ALASKA"] <- NA
+election <- na.omit(election)
+#purging this for duplicate checking
+election$mode[election$mode=="ELECTION DAY"] <- "TOTAL"
+election$mode[election$mode!="TOTAL"] <- NA
 election <- na.omit(election)
 
 #2: null useless columns
@@ -160,6 +167,7 @@ election$mode <- NULL
 election$version <- NULL
 election$candidate <- NULL
 election$state_po <- NULL
+
 
 #3: split into columns and format more
 election <- election  %>% 
@@ -171,3 +179,23 @@ election <- election  %>%
 election <- election %>% group_by(county_fips) %>% mutate(
   winner = ifelse(sum(DEMOCRAT) > sum(REPUBLICAN), "D", "R")
 )
+
+#4: split election years into columns
+election$DEMOCRAT <- NULL
+election$REPUBLICAN <- NULL
+
+election <- election %>%
+  group_by(year) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = year, values_from = winner) %>%
+  select(-row)
+
+#election <- election[!duplicated(election)]
+
+#5: cast to new file
+setwd("~/GitHub/county-case-study/data")
+write.csv(election, file = "election.csv")
+
+data <- na.omit(election)
+dim(data)
+dim(election)
