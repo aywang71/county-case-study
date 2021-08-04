@@ -61,6 +61,10 @@ data <- race2010  %>%
   tidyr::pivot_wider(names_from = YEAR, values_from = c("white", "black", "native", "asian", "pacific", "hispanic")) %>% 
   select(-row)
 view(data)
+#sources
+#https://stackoverflow.com/questions/58053030/tidyverse-how-do-i-pivot-wide-with-multiple-columns
+#https://stackoverflow.com/questions/5890584/how-to-reshape-data-from-long-to-wide-format
+
 
 #6: cast to new file 
 setwd("~/GitHub/county-case-study/data")
@@ -210,6 +214,6 @@ dim(election2)
 setwd("~/GitHub/county-case-study/data")
 write.csv(election2, file = "election.csv")
 
-
+#6: compressed data through Tableau
 setwd("~/GitHub/county-case-study")
 election <- read.csv("data/Election_data_v2.csv")
