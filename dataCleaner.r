@@ -120,6 +120,7 @@ data2000 <- read.csv("data/co-est00int-agesex-5yr.csv")
 data2000$SUMLEV <- NULL
 data2000$STATE <- NULL
 data2000$COUNTY <- NULL
+# TODO: check here for population data 
 data2000$SEX[data2000$SEX==1] <- NA
 data2000$SEX[data2000$SEX==2] <- NA
 data2000$AGEGRP[data2000$AGEGRP==0] <- NA
@@ -154,9 +155,7 @@ setwd("~/GitHub/county-case-study/data")
 write.csv(data2000, file = "2000age.csv")
 
 setwd("~/GitHub/county-case-study")
-election <- read.csv("data/V2countypres_2000-2020.csv")
-
-election$totalvotes <- NULL
+election <- read.csv("data/countypres_2000-2020.csv")
 
 #1: get rid of all rows reading non R/D data
 election$party[election$party=="GREEN"] <- NA
@@ -169,12 +168,14 @@ election$state[election$state=="ALASKA"] <- NA
 election <- na.omit(election)
 #purging this for duplicate checking
 #election$mode <- gsub("ELECTION DAY","TOTAL",election$mode)
-#election$mode[election$mode=="ELECTION DAY"] <- "TOTAL"
+election$mode[election$mode=="ELECTION DAY"] <- "TOTAL"
 election$mode[election$mode!="TOTAL"] <- NA
 #purging counties with missing data
 election$county_fips[election$county_fips=="8014"] <- NA
 election$county_fips[election$county_fips=="36000"] <- NA
 election$county_fips[election$county_fips=="51515"] <- NA
+election$county_fips[election$county_fips=="6077"] <- NA
+
 election <- na.omit(election)
 
 #2: null useless columns
@@ -194,17 +195,17 @@ election <- election  %>%
   select(-row)
 
 election <- election %>% group_by(county_fips) %>% mutate(
-  winner = ifelse(DEMOCRAT > REPUBLICAN, "D", "R")#(DEMOCRAT) - (REPUBLICAN)
-)
+  mov = ((DEMOCRAT) - (REPUBLICAN))/totalvotes)
 
 #4: split election years into columns
 election$DEMOCRAT <- NULL
 election$REPUBLICAN <- NULL
+election$totalvotes <- NULL
 
 election2 <- election %>%
   group_by(year) %>%
   mutate(row = row_number()) %>%
-  tidyr::pivot_wider(names_from = year, values_from = winner) %>% select(-row)
+  tidyr::pivot_wider(names_from = year, values_from = mov) %>% select(-row)
 
 data <- na.omit(election2)
 dim(data)
