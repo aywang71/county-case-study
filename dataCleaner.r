@@ -29,13 +29,14 @@ race2010$SUMLEV <- NULL
 #group_by for state, county, and year?, that would sum everything else (I hope)
 race2010 <- race2010 %>% group_by(STNAME, CTYNAME, YEAR) %>% summarize(
   total = sum(TOT_POP),
-  white = sum(white),
-  black = sum(black),
-  native = sum(native),
-  asian = sum(asian),
-  pacific = sum(pacific),
-  hispanic = sum(hispanic)
+  white = sum(white)/sum(TOT_POP)*100,
+  black = sum(black)/sum(TOT_POP)*100,
+  native = sum(native)/sum(TOT_POP)*100,
+  asian = sum(asian)/sum(TOT_POP)*100,
+  pacific = sum(pacific)/sum(TOT_POP)*100,
+  hispanic = sum(hispanic)/sum(TOT_POP)*100
 )
+race2010$total <- NULL
 
 #3: casting year
 race2010$YEAR[race2010$YEAR==1] <- 2010
@@ -54,24 +55,78 @@ race2010$YEAR[race2010$YEAR==12] <- 2019
 #4: remove NULL'ed out years
 race2010 <- na.omit(race2010)
 
-#5: apply wide pivot to years probably worth changing up the position of year and race but I can't figure out how to (maybe a transpose) - not working currently TODO
-data <- race2010  %>% 
-  group_by(YEAR) %>% 
-  mutate(row = row_number()) %>% 
-  tidyr::pivot_wider(names_from = YEAR, values_from = c("white", "black", "native", "asian", "pacific", "hispanic")) %>% 
-  select(-row)
-view(data)
-#sources
-#https://stackoverflow.com/questions/58053030/tidyverse-how-do-i-pivot-wide-with-multiple-columns
-#https://stackoverflow.com/questions/5890584/how-to-reshape-data-from-long-to-wide-format
+#5: apply pivot long to push race into its own column 
+data <- race2010 %>%
+  tidyr::pivot_longer( cols = white:hispanic,
+  names_to = "RACE",
+  values_to = "temp")
 
+#6: apply pivot wide to pull out year column
+race2010 <- data %>%
+  group_by(YEAR) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = YEAR, values_from = temp) %>%
+  select(-row)
 
 #6: cast to new file 
 setwd("~/GitHub/county-case-study/data")
 write.csv(race2010, file = "2010race.csv")
 
+#1: consolidate age data
+age2010 <- data2010 %>% select(-(TOT_MALE:HNAC_FEMALE))
+age2010$SUMLEV <- NULL
+age2010$STATE <- NULL
+age2010$COUNTY <- NULL
 
-#1: need to also find a way to make the age data - I want the single "year" column to be distributed across them 
+#2: casting year
+age2010$YEAR[age2010$YEAR==1] <- 2010
+age2010$YEAR[age2010$YEAR==2] <- NA
+age2010$YEAR[age2010$YEAR==3] <- NA
+age2010$YEAR[age2010$YEAR==4] <- 2011
+age2010$YEAR[age2010$YEAR==5] <- 2012
+age2010$YEAR[age2010$YEAR==6] <- 2013
+age2010$YEAR[age2010$YEAR==7] <- 2014
+age2010$YEAR[age2010$YEAR==8] <- 2015
+age2010$YEAR[age2010$YEAR==9] <- 2016
+age2010$YEAR[age2010$YEAR==10] <- 2017
+age2010$YEAR[age2010$YEAR==11] <- 2018
+age2010$YEAR[age2010$YEAR==12] <- 2019
+age2010 <- na.omit(age2010)
+
+#3: Updating row references
+age2010$AGEGRP[age2010$AGEGRP==0] <- NA
+age2010$AGEGRP[age2010$AGEGRP==1] <- NA
+age2010$AGEGRP[age2010$AGEGRP==2] <- NA
+age2010$AGEGRP[age2010$AGEGRP==3] <- NA
+age2010$AGEGRP[age2010$AGEGRP==4] <- "15-19"
+age2010$AGEGRP[age2010$AGEGRP==5] <- "20-24"
+age2010$AGEGRP[age2010$AGEGRP==6] <- "25-29"
+age2010$AGEGRP[age2010$AGEGRP==7] <- "30-34"
+age2010$AGEGRP[age2010$AGEGRP==8] <- "35-39"
+age2010$AGEGRP[age2010$AGEGRP==9] <- "40-44"
+age2010$AGEGRP[age2010$AGEGRP==10] <- "45-49"
+age2010$AGEGRP[age2010$AGEGRP==11] <- "50-54"
+age2010$AGEGRP[age2010$AGEGRP==12] <- "55-59"
+age2010$AGEGRP[age2010$AGEGRP==13] <- "60-64"
+age2010$AGEGRP[age2010$AGEGRP==14] <- "65-69"
+age2010$AGEGRP[age2010$AGEGRP==15] <- "70-74"
+age2010$AGEGRP[age2010$AGEGRP==16] <- "75-79"
+age2010$AGEGRP[age2010$AGEGRP==17] <- "80-84"
+age2010$AGEGRP[age2010$AGEGRP==18] <- "85-89"
+age2010 <- na.omit(age2010)
+
+#4: pivot widening the year column 
+data <- age2010 %>%
+  group_by(YEAR) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = YEAR, values_from = TOT_POP) %>%
+  select(-row)
+
+age2010 <- data
+
+#5: write to file
+setwd("~/GitHub/county-case-study/data")
+write.csv(data, file = "2010age.csv")
 
 #https://www2.census.gov/programs-surveys/popest/technical-documentation/file-layouts/2000-2010/intercensal/county/co-est00int-sexracehisp.pdf
 setwd("~/GitHub/county-case-study")
@@ -79,9 +134,8 @@ data2000 <- read.csv("data/co-est00int-sexracehisp.csv")
 
 #1a: Remove some of rows and save hispanics
 race2000 <- data2000 %>% mutate(
-  keep = ifelse((ORIGIN == 2 & RACE == 0) | (ORIGIN == 0 & RACE != 0), 1, 0)
+  keep = ifelse((ORIGIN == 2 & RACE == 0) | (ORIGIN == 0), 1, 0)
 )
-race2000$keep[race2000$keep == 0] <- NA
 
 #1b: Remove some of the useless columns
 race2000$SUMLEV <- NULL
@@ -92,21 +146,65 @@ race2000$SEX[race2000$SEX==1] <- NA
 race2000$SEX[race2000$SEX==2] <- NA
 race2000 <- na.omit(race2000)
 race2000$SEX <- NULL
-race2000$ORIGIN <- NULL
+race2000$ORIGIN[race2000$ORIGIN==1] <- NA
+race2000 <- na.omit(race2000)
 race2000$ESTIMATESBASE2000 <- NULL
-race2000$keep <- NULL
 race2000$POPESTIMATE2010 <- NULL 
+race2000$CENSUS2010POP <- NULL
 
 #2: Replace numbers with races
-race2000$RACE[race2000$RACE==0] <- "hispanic"
 race2000$RACE[race2000$RACE==1] <- "white"
 race2000$RACE[race2000$RACE==2] <- "black"
 race2000$RACE[race2000$RACE==3] <- "native"
 race2000$RACE[race2000$RACE==4] <- "asian"
 race2000$RACE[race2000$RACE==5] <- "pacific"
 
+#2b: getting the total in
+race2000 <- race2000 %>% mutate(
+  RACE = ifelse((ORIGIN == 0 & RACE == 0), "total", RACE))
+race2000$RACE[race2000$RACE==0] <- "hispanic"
+race2000$ORIGIN <- NULL
+race2000$keep[race2000$keep==0] <- NA
+race2000 <- na.omit(race2000)
+race2000$keep <- NULL
+
 #3: Updating column names
-colnames(race2000) <- c("STNAME", "CTYNAME", "RACE", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010)
+colnames(race2000) <- c("STNAME", "CTYNAME", "RACE", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009)
+
+#3a: update to percentage values instead of counts
+#3aa: pivot in the years 
+data2 <- race2000 %>%
+  tidyr::pivot_longer( cols = "2000":"2009",
+                       names_to = "years",
+                       values_to = "temp")
+
+#3ab: pivot out the race
+data2 <- data2 %>%
+  tidyr::pivot_wider(names_from = RACE, values_from = temp)
+
+#3ac: conduct mutate
+data2 <- data2 %>% group_by(STNAME, CTYNAME, years) %>% summarize(
+  TOT_POP = sum(total),
+  white = sum(white)/sum(total)*100,
+  black = sum(black)/sum(total)*100,
+  native = sum(native)/sum(total)*100,
+  asian = sum(asian)/sum(total)*100,
+  pacific = sum(pacific)/sum(total)*100,
+  hispanic = sum(hispanic)/sum(total)*100
+)
+data2$TOT_POP <- NULL
+
+#3ad: pivot in the race
+data2 <- data2 %>%
+  tidyr::pivot_longer( cols = white:hispanic,
+                       names_to = "RACE",
+                       values_to = "temp")
+
+#3ae: pivot out the years
+data2 <- data2 %>%
+  tidyr::pivot_wider(names_from = years, values_from = temp)
+
+race2000 <- data2
 
 #4: cast to new file
 setwd("~/GitHub/county-case-study/data")
@@ -120,16 +218,15 @@ data2000 <- read.csv("data/co-est00int-agesex-5yr.csv")
 data2000$SUMLEV <- NULL
 data2000$STATE <- NULL
 data2000$COUNTY <- NULL
-# TODO: check here for population data 
 data2000$SEX[data2000$SEX==1] <- NA
 data2000$SEX[data2000$SEX==2] <- NA
 data2000$AGEGRP[data2000$AGEGRP==0] <- NA
 data2000 <- na.omit(data2000)
 
 #2: Updating row references
-data2000$AGEGRP[data2000$AGEGRP==0] <- "0-4"
-data2000$AGEGRP[data2000$AGEGRP==1] <- "5-9"
-data2000$AGEGRP[data2000$AGEGRP==2] <- "10-14"
+data2000$AGEGRP[data2000$AGEGRP==0] <- NA
+data2000$AGEGRP[data2000$AGEGRP==1] <- NA
+data2000$AGEGRP[data2000$AGEGRP==2] <- NA
 data2000$AGEGRP[data2000$AGEGRP==3] <- "15-19"
 data2000$AGEGRP[data2000$AGEGRP==4] <- "20-24"
 data2000$AGEGRP[data2000$AGEGRP==5] <- "25-29"
@@ -145,14 +242,31 @@ data2000$AGEGRP[data2000$AGEGRP==14] <- "70-74"
 data2000$AGEGRP[data2000$AGEGRP==15] <- "75-79"
 data2000$AGEGRP[data2000$AGEGRP==16] <- "80-84"
 data2000$AGEGRP[data2000$AGEGRP==17] <- "85-89"
-data2000$AGEGRP[data2000$AGEGRP==18] <- "90-94"
+data2000$AGEGRP[data2000$AGEGRP==18] <- NA
+data2000 <- na.omit(data2000)
+data2000$SEX <- NULL
+data2000$CENSUS2010POP <- NULL
+data2000$ESTIMATESBASE2000 <- NULL
+data2000$POPESTIMATE2010 <- NULL
 
 #3: Updating column names
-colnames(data2000) <- c("STNAME", "CTYNAME", "AGEGRP", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010)
+colnames(data2000) <- c("STNAME", "CTYNAME", "AGEGRP", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009)
 
 #4: cast to new file
 setwd("~/GitHub/county-case-study/data")
 write.csv(data2000, file = "2000age.csv")
+
+#joining the race data: race2000 and race2010
+raceData <- inner_join(race2000, race2010)
+#cast to new file
+setwd("~/GitHub/county-case-study/data")
+write.csv(raceData, file = "final/race.csv")
+
+#joining the age data: data2000 and age2010
+ageData <- inner_join(data2000, age2010)
+#cast to new file
+setwd("~/GitHub/county-case-study/data")
+write.csv(ageData, file = "final/age.csv")
 
 setwd("~/GitHub/county-case-study")
 election <- read.csv("data/countypres_2000-2020.csv")
