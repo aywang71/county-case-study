@@ -248,6 +248,9 @@ data2000$COUNTY <- NULL
 data2000$SEX[data2000$SEX==1] <- NA
 data2000$SEX[data2000$SEX==2] <- NA
 data2000 <- na.omit(data2000)
+data2000$CTYNAME[data2000$CTYNAME=="Yakutat City and Borough"] <- NA
+data2000$CTYNAME[data2000$CTYNAME=="Kalawao County"] <- NA
+data2000$CTYNAME[data2000$CTYNAME=="Loving County"] <- NA
 
 #2: Updating row references
 data2000$AGEGRP[data2000$AGEGRP==0] <- "total"
