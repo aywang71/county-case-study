@@ -94,7 +94,7 @@ age2010$YEAR[age2010$YEAR==12] <- 2019
 age2010 <- na.omit(age2010)
 
 #3: Updating row references
-age2010$AGEGRP[age2010$AGEGRP==0] <- NA
+age2010$AGEGRP[age2010$AGEGRP==0] <- "total"
 age2010$AGEGRP[age2010$AGEGRP==1] <- NA
 age2010$AGEGRP[age2010$AGEGRP==2] <- NA
 age2010$AGEGRP[age2010$AGEGRP==3] <- NA
@@ -114,6 +114,33 @@ age2010$AGEGRP[age2010$AGEGRP==16] <- "75-79"
 age2010$AGEGRP[age2010$AGEGRP==17] <- "80-84"
 age2010$AGEGRP[age2010$AGEGRP==18] <- "85-89"
 age2010 <- na.omit(age2010)
+
+#3b: pivot widen on the age groups 
+data <- age2010 %>%
+  group_by(AGEGRP) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = AGEGRP, values_from = TOT_POP) %>%
+  select(-row)
+
+#3c: mutate to percentage instead of value
+colnames(data) <- c("STNAME", "CTYNAME", "YEAR", 'total', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o')
+data <- data %>%  mutate(
+  ab = (a + b)/total * 100,
+  cd = (c + b)/total * 100,
+  ef = (e + f)/total * 100,
+  gh = (g + h)/total * 100,
+  ij = (i + j)/total * 100,
+  kl = (k + l)/total * 100,
+  mno = (m + n + o)/total * 100,
+) %>%
+  select(-(total:o))
+colnames(data) <- c("STNAME", "CTYNAME", "YEAR", "15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75+")
+
+#3d: fold the age section back into a column 
+age2010 <- data %>%
+  tidyr::pivot_longer( cols = "15-24":"75+",
+                       names_to = "AGEGRP",
+                       values_to = "TOT_POP")
 
 #4: pivot widening the year column 
 data <- age2010 %>%
@@ -220,11 +247,10 @@ data2000$STATE <- NULL
 data2000$COUNTY <- NULL
 data2000$SEX[data2000$SEX==1] <- NA
 data2000$SEX[data2000$SEX==2] <- NA
-data2000$AGEGRP[data2000$AGEGRP==0] <- NA
 data2000 <- na.omit(data2000)
 
 #2: Updating row references
-data2000$AGEGRP[data2000$AGEGRP==0] <- NA
+data2000$AGEGRP[data2000$AGEGRP==0] <- "total"
 data2000$AGEGRP[data2000$AGEGRP==1] <- NA
 data2000$AGEGRP[data2000$AGEGRP==2] <- NA
 data2000$AGEGRP[data2000$AGEGRP==3] <- "15-19"
@@ -252,7 +278,49 @@ data2000$POPESTIMATE2010 <- NULL
 #3: Updating column names
 colnames(data2000) <- c("STNAME", "CTYNAME", "AGEGRP", 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009)
 
-#4: cast to new file
+#3a: bring in the year column 
+data2000 <- data2000 %>%
+  tidyr::pivot_longer( cols = "2000":"2009",
+                       names_to = "YEAR",
+                       values_to = "TOT_POP")
+
+#3b: pivot widen on the age groups 
+data <- data2000 %>%
+  group_by(AGEGRP) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = AGEGRP, values_from = TOT_POP) %>%
+  select(-row)
+
+#3c: mutate to percentage instead of value
+colnames(data) <- c("STNAME", "CTYNAME", "YEAR", 'total', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o')
+data <- data %>%  mutate(
+  ab = (a + b)/total * 100,
+  cd = (c + b)/total * 100,
+  ef = (e + f)/total * 100,
+  gh = (g + h)/total * 100,
+  ij = (i + j)/total * 100,
+  kl = (k + l)/total * 100,
+  mno = (m + n + o)/total * 100,
+) %>%
+  select(-(total:o))
+colnames(data) <- c("STNAME", "CTYNAME", "YEAR", "15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75+")
+
+#3d: fold the age section back into a column 
+data2000 <- data %>%
+  tidyr::pivot_longer( cols = "15-24":"75+",
+                       names_to = "AGEGRP",
+                       values_to = "TOT_POP")
+
+#4: pivot widening the year column 
+data <- data2000 %>%
+  group_by(YEAR) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = YEAR, values_from = TOT_POP) %>%
+  select(-row)
+
+data2000 <- data
+
+#5: cast to new file
 setwd("~/GitHub/county-case-study/data")
 write.csv(data2000, file = "2000age.csv")
 
