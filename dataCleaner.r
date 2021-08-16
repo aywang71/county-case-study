@@ -351,8 +351,19 @@ election <- na.omit(election)
 election$state[election$state=="DISTRICT OF COLUMBIA"] <- NA
 election$state[election$state=="ALASKA"] <- NA
 election <- na.omit(election)
+
+#0a: summing up the votes
+data <- election %>% 
+  group_by(county_fips, year, party) %>% summarize(
+    votes = ifelse(((year == 2020) & (mode != "total")), sum(candidatevotes), candidatevotes)
+  )
+election2 <- election
+election3 <- inner_join(election2, data)
+election3 <- unique(election3)
+election <- election3
+
+
 #purging this for duplicate checking
-#election$mode <- gsub("ELECTION DAY","TOTAL",election$mode)
 election$mode[election$mode=="ELECTION DAY"] <- "TOTAL"
 election$mode[election$mode!="TOTAL"] <- NA
 #purging counties with missing data
@@ -369,6 +380,10 @@ election$mode <- NULL
 election$version <- NULL
 election$candidate <- NULL
 election$state_po <- NULL
+
+#2a: update names
+colnames(election) <- c("year", "state", "county_name", "county_fips", "party", "rm", "totalvotes", "candidatevotes")
+election$rm <- NULL 
 
 election$county_name <- gsub("CITY","",election$county_name)
 
@@ -392,14 +407,19 @@ election2 <- election %>%
   mutate(row = row_number()) %>%
   tidyr::pivot_wider(names_from = year, values_from = mov) %>% select(-row)
 
-data <- na.omit(election2)
+data <- election2 %>% select(-("2000":"2016"))
+election3 <- election2 %>% select(-"2020")
+
+election4 <- inner_join(data, election3)
+
+data <- na.omit(election4)
 dim(data)
-dim(election2)
+dim(election4)
 
 #5: cast to new file
 setwd("~/GitHub/county-case-study/data")
-write.csv(election2, file = "election.csv")
+write.csv(data, file = "final/election.csv")
 
 #6: compressed data through Tableau
 setwd("~/GitHub/county-case-study")
-election <- read.csv("data/Election_data_v2.csv")
+election2 <- read.csv("data/final/election_3.csv")
