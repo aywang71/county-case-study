@@ -13,14 +13,14 @@ library(tidyverse)
 #https://www2.census.gov/programs-surveys/popest/technical-documentation/file-layouts/2010-2019/cc-est2019-alldata.pdf
 data2010 <- read.csv("data/cc-est2019-alldata.csv")
 
-#1: consolidate racial data 
+#1: consolidate racial data #here we're missing some of the races? 
 race2010 <- mutate(
   data2010, 
-  white = WA_MALE + WA_FEMALE,
-  black = BA_MALE + BA_FEMALE,
-  native = IA_MALE + IA_FEMALE,
-  asian = AA_MALE + AA_FEMALE,
-  pacific = NA_MALE + NA_FEMALE,
+  white = NHWA_MALE + NHWA_FEMALE,
+  black = BA_MALE + NHBA_FEMALE,
+  native = NHIA_MALE + NHIA_FEMALE,
+  asian = NHAA_MALE + NHAA_FEMALE,
+  pacific = NHNA_MALE + NHNA_FEMALE,
   hispanic = H_MALE + H_FEMALE)
 race2010 <- race2010 %>% select(-(TOT_MALE:HNAC_FEMALE))
 race2010$SUMLEV <- NULL
@@ -29,12 +29,12 @@ race2010$SUMLEV <- NULL
 #group_by for state, county, and year?, that would sum everything else (I hope)
 race2010 <- race2010 %>% group_by(STNAME, CTYNAME, YEAR) %>% summarize(
   total = sum(TOT_POP),
-  white = sum(white)/sum(TOT_POP)*100,
-  black = sum(black)/sum(TOT_POP)*100,
-  native = sum(native)/sum(TOT_POP)*100,
-  asian = sum(asian)/sum(TOT_POP)*100,
-  pacific = sum(pacific)/sum(TOT_POP)*100,
-  hispanic = sum(hispanic)/sum(TOT_POP)*100
+  white = sum(white),#/sum(TOT_POP)*100,
+  black = sum(black),#/sum(TOT_POP)*100,
+  native = sum(native),#/sum(TOT_POP)*100,
+  asian = sum(asian),#/sum(TOT_POP)*100,
+  pacific = sum(pacific),#/sum(TOT_POP)*100,
+  hispanic = sum(hispanic),#/sum(TOT_POP)*100
 )
 race2010$total <- NULL
 
@@ -159,12 +159,14 @@ write.csv(data, file = "2010age.csv")
 setwd("~/GitHub/county-case-study")
 data2000 <- read.csv("data/co-est00int-sexracehisp.csv")
 
-#1a: Remove some of rows and save hispanics
+#1a: Remove some of rows and save hispanics 
 race2000 <- data2000 %>% mutate(
-  keep = ifelse((ORIGIN == 2 & RACE == 0) | (ORIGIN == 0), 1, 0)
+  keep = ifelse((ORIGIN == 2 & RACE == 0) | (ORIGIN == 1 & RACE != 0) | (ORIGIN == 0 & RACE == 0), 1, 0)
 )
 
 #1b: Remove some of the useless columns
+race2000$keep[race2000$keep==0] <- NA
+race2000 <- na.omit(race2000)
 race2000$SUMLEV <- NULL
 race2000$STATE <- NULL
 race2000$COUNTY <- NULL
@@ -173,7 +175,7 @@ race2000$SEX[race2000$SEX==1] <- NA
 race2000$SEX[race2000$SEX==2] <- NA
 race2000 <- na.omit(race2000)
 race2000$SEX <- NULL
-race2000$ORIGIN[race2000$ORIGIN==1] <- NA
+#race2000$ORIGIN[race2000$ORIGIN==0] <- NA
 race2000 <- na.omit(race2000)
 race2000$ESTIMATESBASE2000 <- NULL
 race2000$POPESTIMATE2010 <- NULL 
@@ -191,8 +193,6 @@ race2000 <- race2000 %>% mutate(
   RACE = ifelse((ORIGIN == 0 & RACE == 0), "total", RACE))
 race2000$RACE[race2000$RACE==0] <- "hispanic"
 race2000$ORIGIN <- NULL
-race2000$keep[race2000$keep==0] <- NA
-race2000 <- na.omit(race2000)
 race2000$keep <- NULL
 
 #3: Updating column names
